@@ -16,6 +16,7 @@ public class PoiAlertPlugin: CAPPlugin, CAPBridgedPlugin {
 
     private var warningTask: Task<Void, Never>?
     private var originalBrightness: CGFloat?
+    private var audioPlayer: AVAudioPlayer?
     private var warningID = 0
 
     @objc func flash(_ call: CAPPluginCall) {
@@ -37,6 +38,7 @@ public class PoiAlertPlugin: CAPPlugin, CAPBridgedPlugin {
         stopWarning()
 
         originalBrightness = UIScreen.main.brightness
+        playWarningSound()
         let id = warningID
 
         warningTask = Task { @MainActor in
@@ -61,6 +63,8 @@ public class PoiAlertPlugin: CAPPlugin, CAPBridgedPlugin {
         warningID += 1
         warningTask?.cancel()
         warningTask = nil
+        audioPlayer?.stop()
+        audioPlayer = nil
         finishWarning()
     }
 
@@ -90,6 +94,35 @@ public class PoiAlertPlugin: CAPPlugin, CAPBridgedPlugin {
             device.unlockForConfiguration()
         } catch {
             NSLog("PoiAlert: Torch error: \(error)")
+        }
+    }
+
+    private func playWarningSound() {
+        guard let url = Bundle.main.url(
+            forResource: "poi-warning",
+            withExtension: "wav"
+        ) else {
+            NSLog("PoiAlert: Warnton nicht gefunden")
+            return
+        }
+
+        do {
+            let session = AVAudioSession.sharedInstance()
+
+            try session.setCategory(
+                .playback,
+                mode: .default,
+                options: [.mixWithOthers]
+            )
+
+            try session.setActive(true)
+
+            audioPlayer = try AVAudioPlayer(contentsOf: url)
+            audioPlayer?.prepareToPlay()
+            audioPlayer?.play()
+
+        } catch {
+            NSLog("PoiAlert: Audiofehler: \(error)")
         }
     }
 
