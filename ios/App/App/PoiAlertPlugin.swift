@@ -16,6 +16,7 @@ public class PoiAlertPlugin: CAPPlugin, CAPBridgedPlugin {
 
     private var warningTask: Task<Void, Never>?
     private var originalBrightness: CGFloat?
+    private var warningID = 0
 
     @objc func flash(_ call: CAPPluginCall) {
         DispatchQueue.main.async {
@@ -36,31 +37,28 @@ public class PoiAlertPlugin: CAPPlugin, CAPBridgedPlugin {
         stopWarning()
 
         originalBrightness = UIScreen.main.brightness
+        let id = warningID
 
         warningTask = Task { @MainActor in
-            // 3 Taschenlampenblitze und 5 Displayblitze
             for step in 0..<10 {
-                if Task.isCancelled { break }
+                if Task.isCancelled { return }
 
-                let displayOn = step % 2 == 0
-                UIScreen.main.brightness = displayOn ? 1.0 : 0.15
-
-                // 3 Blitzimpulse in den ersten 6 Schritten
-                if step < 6 {
-                    setTorch(step % 2 == 0)
-                } else {
-                    setTorch(false)
-                }
+                UIScreen.main.brightness = step % 2 == 0 ? 1.0 : 0.15
+                setTorch(step < 6 && step % 2 == 0)
 
                 try? await Task.sleep(nanoseconds: 180_000_000)
             }
 
-            finishWarning()
+            if !Task.isCancelled && id == warningID {
+                finishWarning()
+                warningTask = nil
+            }
         }
     }
 
     @MainActor
     private func stopWarning() {
+        warningID += 1
         warningTask?.cancel()
         warningTask = nil
         finishWarning()
@@ -92,6 +90,18 @@ public class PoiAlertPlugin: CAPPlugin, CAPBridgedPlugin {
             device.unlockForConfiguration()
         } catch {
             NSLog("PoiAlert: Torch error: \(error)")
+        }
+    }
+
+    public override func load() {
+        NotificationCenter.default.addObserver(
+            forName: UIApplication.willResignActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.stopWarning()
+            }
         }
     }
 }
