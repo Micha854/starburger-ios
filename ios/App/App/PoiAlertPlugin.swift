@@ -52,13 +52,14 @@ public class PoiAlertPlugin: CAPPlugin, CAPBridgedPlugin {
                     setTorch(false)
                 }
 
-                try? await Task.sleep(for: .milliseconds(180))
+                try? await Task.sleep(nanoseconds: 180_000_000)
             }
 
             finishWarning()
         }
     }
 
+    @MainActor
     private func stopWarning() {
         warningTask?.cancel()
         warningTask = nil
