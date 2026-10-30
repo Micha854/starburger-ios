@@ -66,5 +66,7 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Starburger Navigation benötigt deinen Standort für die Navigation und POI-Warnungen.</string>
 </dict>
 </plist>

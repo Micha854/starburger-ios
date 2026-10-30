@@ -1,5 +1,9 @@
 {
   "appId": "de.starburger.navigation",
   "appName": "Starburger Navigation",
-  "webDir": "www"
+  "webDir": "www",
+  "server": {
+    "url": "https://hl.pasta-ebasta.de/map/mapbox/",
+    "cleartext": false
+  }
 }
