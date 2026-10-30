@@ -32,6 +32,7 @@ public class PoiAlertPlugin: CAPPlugin, CAPBridgedPlugin {
         }
     }
 
+    @MainActor
     private func startWarning() {
         stopWarning()
 
