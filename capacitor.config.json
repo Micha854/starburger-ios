@@ -3,7 +3,7 @@
   "appName": "Starburger Navigation",
   "webDir": "www",
   "server": {
-    "url": "https://hl.pasta-ebasta.de/map/mapbox/",
+    "url": "https://hl.pasta-ebasta.de/map/mapbox/index.php?driver=Micha%20S.",
     "cleartext": false
   }
 }
