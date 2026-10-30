@@ -36,9 +36,15 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             build
 
-      - name: Build bereitstellen
+      - name: IPA erstellen
+        run: |
+          mkdir -p Payload
+          cp -R build/Build/Products/Debug-iphoneos/App.app Payload/
+          zip -qry Starburger-iOS.ipa Payload
+
+      - name: IPA bereitstellen
         uses: actions/upload-artifact@v4
         with:
-          name: Starburger-iOS-Build
-          path: build/Build/Products/Debug-iphoneos/App.app
+          name: Starburger-iOS
+          path: Starburger-iOS.ipa
           retention-days: 7
