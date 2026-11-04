@@ -73,7 +73,8 @@ public class NativeNavigationPlugin: CAPPlugin, CAPBridgedPlugin, NavigationView
                     let navigationOptions = NavigationOptions(
                         mapboxNavigation: mapboxNavigation,
                         voiceController: provider.routeVoiceController,
-                        eventsManager: provider.eventsManager()
+                        eventsManager: provider.eventsManager(),
+                        styles: [StandardDayStyle(), StandardNightStyle()]
                     )
 
                     let controller = NavigationViewController(
@@ -83,6 +84,8 @@ public class NativeNavigationPlugin: CAPPlugin, CAPBridgedPlugin, NavigationView
 
                     controller.modalPresentationStyle = .fullScreen
                     controller.delegate = self
+                    controller.showsReportFeedback = false
+                    controller.usesNightStyleInDarkMode = true
                     self.activeNavigationController = controller
                     switch UserDefaults.standard.string(forKey: "sb_nav_theme") {
                     case "day": controller.overrideUserInterfaceStyle = .light
@@ -137,7 +140,7 @@ public class NativeNavigationPlugin: CAPPlugin, CAPBridgedPlugin, NavigationView
 
     @objc private func showSettings() {
         guard let controller = activeNavigationController else { return }
-        let sheet = UIAlertController(title: "Navigationseinstellungen", message: nil, preferredStyle: .actionSheet)
+        let sheet = UIAlertController(title: "Navigationseinstellungen", message: "Kartenansicht und Navigation", preferredStyle: .actionSheet)
         sheet.addAction(UIAlertAction(title: "Tagmodus", style: .default) { _ in
             controller.overrideUserInterfaceStyle = .light
             UserDefaults.standard.set("day", forKey: "sb_nav_theme")
@@ -150,12 +153,28 @@ public class NativeNavigationPlugin: CAPPlugin, CAPBridgedPlugin, NavigationView
             controller.overrideUserInterfaceStyle = .unspecified
             UserDefaults.standard.set("auto", forKey: "sb_nav_theme")
         })
+        sheet.addAction(UIAlertAction(title: "Sprache: Deutsch", style: .default) { _ in
+            self.showSettingsInfo("Sprache", "Die Routenberechnung verwendet Deutsch (de-DE). Für die vollständige Übersetzung der Mapbox-Oberfläche muss auch die iOS-App-Lokalisierung Deutsch enthalten.")
+        })
+        sheet.addAction(UIAlertAction(title: "Sprachausgabe", style: .default) { _ in
+            self.showSettingsInfo("Sprachausgabe", "Die Sprachausgabe lässt sich über das Lautsprechersymbol in der Navigation ein- oder ausschalten.")
+        })
+        sheet.addAction(UIAlertAction(title: "Kartenansicht", style: .default) { _ in
+            self.showSettingsInfo("Kartenansicht", "Die Kartenkamera lässt sich während der Navigation über die vorhandenen Mapbox-Kartenschaltflächen steuern.")
+        })
         sheet.addAction(UIAlertAction(title: "Abbrechen", style: .cancel))
         if let popover = sheet.popoverPresentationController {
             popover.sourceView = settingsButton
             popover.sourceRect = settingsButton?.bounds ?? .zero
         }
         controller.present(sheet, animated: true)
+    }
+
+    private func showSettingsInfo(_ title: String, _ message: String) {
+        guard let controller = activeNavigationController else { return }
+        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        controller.present(alert, animated: true)
     }
 
 }
