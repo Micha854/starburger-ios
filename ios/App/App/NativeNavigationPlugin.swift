@@ -158,7 +158,9 @@ public class NativeNavigationPlugin: CAPPlugin, CAPBridgedPlugin, NavigationView
     private func renderNativeMarkers() {
         guard let controller = activeNavigationController else { return }
 
-        let mapView = controller.navigationMapView.mapView
+        guard let mapView = controller.navigationMapView?.mapView else {
+            return
+        }
 
         if markerManager == nil {
             markerManager = mapView.annotations.makePointAnnotationManager()
@@ -232,7 +234,7 @@ public class NativeNavigationPlugin: CAPPlugin, CAPBridgedPlugin, NavigationView
 
         let size = CGSize(width: 38, height: 38)
 
-        return UIGraphicsImageRenderer(size: size).image { _ in {
+        return UIGraphicsImageRenderer(size: size).image { _ in
             let rect = CGRect(origin: .zero, size: size)
 
             color.setFill()
@@ -249,7 +251,7 @@ public class NativeNavigationPlugin: CAPPlugin, CAPBridgedPlugin, NavigationView
             )?.withTintColor(.white, renderingMode: .alwaysOriginal)
 
             image?.draw(in: CGRect(x: 9, y: 9, width: 20, height: 20))
-        }}
+        }
     }
 
     private func showLoading(on parent: UIView?) {
