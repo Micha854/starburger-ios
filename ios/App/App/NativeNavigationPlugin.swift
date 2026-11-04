@@ -8,7 +8,7 @@ import MapboxNavigationCore
 import MapboxNavigationUIKit
 
 @objc(NativeNavigationPlugin)
-public class NativeNavigationPlugin: CAPPlugin, CAPBridgedPlugin {
+public class NativeNavigationPlugin: CAPPlugin, CAPBridgedPlugin, NavigationViewControllerDelegate {
 
     public let identifier = "NativeNavigationPlugin"
     public let jsName = "NativeNavigation"
@@ -33,6 +33,11 @@ public class NativeNavigationPlugin: CAPPlugin, CAPBridgedPlugin {
         }
 
         DispatchQueue.main.async {
+            guard self.navigationProvider == nil, self.activeNavigationController == nil else {
+                call.reject("Navigation ist bereits aktiv")
+                return
+            }
+
             guard let origin = self.locationManager.location?.coordinate else {
                 self.locationManager.requestWhenInUseAuthorization()
                 call.reject("GPS-Position nicht verfügbar. Standortfreigabe prüfen und erneut versuchen.")
@@ -77,6 +82,7 @@ public class NativeNavigationPlugin: CAPPlugin, CAPBridgedPlugin {
                     )
 
                     controller.modalPresentationStyle = .fullScreen
+                    controller.delegate = self
                     self.activeNavigationController = controller
                     switch UserDefaults.standard.string(forKey: "sb_nav_theme") {
                     case "day": controller.overrideUserInterfaceStyle = .light
@@ -86,6 +92,8 @@ public class NativeNavigationPlugin: CAPPlugin, CAPBridgedPlugin {
                     self.addSettingsButton(to: controller)
 
                     guard let viewController = self.bridge?.viewController else {
+                        self.activeNavigationController = nil
+                        self.settingsButton = nil
                         self.navigationProvider = nil
                         call.reject("Capacitor ViewController nicht verfügbar")
                         return
@@ -95,6 +103,14 @@ public class NativeNavigationPlugin: CAPPlugin, CAPBridgedPlugin {
                     call.resolve()
                 }
             }
+        }
+    }
+
+    public func navigationViewControllerDidDismiss(_ navigationViewController: NavigationViewController, byCanceling canceled: Bool) {
+        navigationViewController.dismiss(animated: true) { [weak self] in
+            self?.settingsButton = nil
+            self?.activeNavigationController = nil
+            self?.navigationProvider = nil
         }
     }
 
