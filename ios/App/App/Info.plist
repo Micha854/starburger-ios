@@ -70,5 +70,12 @@
 	<string>Starburger Navigation benötigt deinen Standort für die Navigation und POI-Warnungen.</string>
 	<key>MBXAccessToken</key>
 	<string>pk.eyJ1IjoibWljaGE4NTQiLCJhIjoiY204cXpiazQ1MHByOTJpczhsY2Z6eGNnZyJ9.EW7JHNeItOI5pz0bVPxSgw</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+		<string>location</string>
+	</array>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Starburger Navigation benötigt deinen Standort für die Navigation und POI-Warnungen im Hintergrund.</string>
 </dict>
 </plist>
