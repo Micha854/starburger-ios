@@ -21,6 +21,7 @@
 		A10000000000000000000005 /* poi-warning.wav in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000006 /* poi-warning.wav */; };
 		B20000000000000000000001 /* MapboxNavigationCore in Frameworks */ = {isa = PBXBuildFile; productRef = B20000000000000000000003 /* MapboxNavigationCore */; };
 		B20000000000000000000002 /* MapboxNavigationUIKit in Frameworks */ = {isa = PBXBuildFile; productRef = B20000000000000000000004 /* MapboxNavigationUIKit */; };
+		C30000000000000000000001 /* NativeNavigationPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = C30000000000000000000002 /* NativeNavigationPlugin.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -38,6 +39,7 @@
 		A10000000000000000000003 /* PoiAlertPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoiAlertPlugin.swift; sourceTree = "<group>"; };
 		A10000000000000000000004 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
 		A10000000000000000000006 /* poi-warning.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "poi-warning.wav"; sourceTree = "<group>"; };
+		C30000000000000000000002 /* NativeNavigationPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeNavigationPlugin.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -77,6 +79,7 @@
 				A10000000000000000000006 /* poi-warning.wav */,
 				A10000000000000000000003 /* PoiAlertPlugin.swift */,
 				A10000000000000000000004 /* ViewController.swift */,
+				C30000000000000000000002 /* NativeNavigationPlugin.swift */,
 				9582B6822FE993A50072D4E8 /* SceneDelegate.swift */,
 				50379B222058CBB4000EE86E /* capacitor.config.json */,
 				504EC3071FED79650016851F /* AppDelegate.swift */,
@@ -179,6 +182,7 @@
 				9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */,
 				A10000000000000000000001 /* PoiAlertPlugin.swift in Sources */,
 				A10000000000000000000002 /* ViewController.swift in Sources */,
+				C30000000000000000000001 /* NativeNavigationPlugin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

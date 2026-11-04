@@ -6,5 +6,6 @@ class ViewController: CAPBridgeViewController {
     override open func capacitorDidLoad() {
         super.capacitorDidLoad()
         bridge?.registerPluginInstance(PoiAlertPlugin())
+        bridge?.registerPluginInstance(NativeNavigationPlugin())
     }
 }
