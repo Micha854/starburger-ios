@@ -21,7 +21,7 @@ public class NativeNavigationPlugin: CAPPlugin, CAPBridgedPlugin, NavigationView
     private var navigationProvider: MapboxNavigationProvider?
     private weak var activeNavigationController: NavigationViewController?
     private var settingsButton: UIButton?
-
+    private var loadingOverlay: UIView?
 
     @objc func start(_ call: CAPPluginCall) {
         guard let latitude = call.getDouble("latitude"),
@@ -43,6 +43,8 @@ public class NativeNavigationPlugin: CAPPlugin, CAPBridgedPlugin, NavigationView
                 call.reject("GPS-Position nicht verfügbar. Standortfreigabe prüfen und erneut versuchen.")
                 return
             }
+
+            self.showLoading(on: self.bridge?.viewController?.view)
 
             let destination = CLLocationCoordinate2D(
                 latitude: latitude,
@@ -66,6 +68,7 @@ public class NativeNavigationPlugin: CAPPlugin, CAPBridgedPlugin, NavigationView
             Task { @MainActor in
                 switch await request.result {
                 case .failure(let error):
+                    self.hideLoading()
                     self.navigationProvider = nil
                     call.reject("Routenberechnung fehlgeschlagen: \(error.localizedDescription)")
 
@@ -87,14 +90,21 @@ public class NativeNavigationPlugin: CAPPlugin, CAPBridgedPlugin, NavigationView
                     controller.showsReportFeedback = false
                     controller.usesNightStyleInDarkMode = true
                     self.activeNavigationController = controller
+
                     switch UserDefaults.standard.string(forKey: "sb_nav_theme") {
-                    case "day": controller.overrideUserInterfaceStyle = .light
-                    case "night": controller.overrideUserInterfaceStyle = .dark
-                    default: controller.overrideUserInterfaceStyle = .unspecified
+                    case "day":
+                        controller.overrideUserInterfaceStyle = .light
+                    case "night":
+                        controller.overrideUserInterfaceStyle = .dark
+                    default:
+                        controller.overrideUserInterfaceStyle = .unspecified
                     }
+
                     self.addSettingsButton(to: controller)
+                    self.localizeResumeButton(in: controller.view)
 
                     guard let viewController = self.bridge?.viewController else {
+                        self.hideLoading()
                         self.activeNavigationController = nil
                         self.settingsButton = nil
                         self.navigationProvider = nil
@@ -102,20 +112,77 @@ public class NativeNavigationPlugin: CAPPlugin, CAPBridgedPlugin, NavigationView
                         return
                     }
 
-                    viewController.present(controller, animated: true)
-                    call.resolve()
+                    viewController.present(controller, animated: true) {
+                        self.localizeResumeButton(in: controller.view)
+                        self.hideLoading()
+                        call.resolve()
+                    }
                 }
             }
         }
     }
 
-    public func navigationViewControllerDidDismiss(_ navigationViewController: NavigationViewController, byCanceling canceled: Bool) {
+    public func navigationViewControllerDidDismiss(
+        _ navigationViewController: NavigationViewController,
+        byCanceling canceled: Bool
+    ) {
         Task { @MainActor in
             navigationViewController.dismiss(animated: true) { [weak self] in
+                self?.hideLoading()
                 self?.settingsButton = nil
                 self?.activeNavigationController = nil
                 self?.navigationProvider = nil
             }
+        }
+    }
+
+    private func showLoading(on parent: UIView?) {
+        guard let parent = parent else { return }
+
+        let overlay = UIView(frame: parent.bounds)
+        overlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        overlay.backgroundColor = UIColor.black.withAlphaComponent(0.65)
+
+        let stack = UIStackView()
+        stack.axis = .vertical
+        stack.alignment = .center
+        stack.spacing = 14
+        stack.translatesAutoresizingMaskIntoConstraints = false
+
+        let spinner = UIActivityIndicatorView(style: .large)
+        spinner.color = .white
+        spinner.startAnimating()
+
+        let label = UILabel()
+        label.text = "Navigation wird geladen …"
+        label.textColor = .white
+
+        stack.addArrangedSubview(spinner)
+        stack.addArrangedSubview(label)
+        overlay.addSubview(stack)
+
+        NSLayoutConstraint.activate([
+            stack.centerXAnchor.constraint(equalTo: overlay.centerXAnchor),
+            stack.centerYAnchor.constraint(equalTo: overlay.centerYAnchor)
+        ])
+
+        parent.addSubview(overlay)
+        loadingOverlay = overlay
+    }
+
+    private func hideLoading() {
+        loadingOverlay?.removeFromSuperview()
+        loadingOverlay = nil
+    }
+
+    private func localizeResumeButton(in view: UIView) {
+        for subview in view.subviews {
+            if let button = subview as? UIButton,
+               button.title(for: .normal) == "Resume" {
+                button.setTitle("Zurück zur Route", for: .normal)
+            }
+
+            localizeResumeButton(in: subview)
         }
     }
 
@@ -128,53 +195,90 @@ public class NativeNavigationPlugin: CAPPlugin, CAPBridgedPlugin, NavigationView
         button.translatesAutoresizingMaskIntoConstraints = false
         button.accessibilityLabel = "Navigationseinstellungen"
         button.addTarget(self, action: #selector(showSettings), for: .touchUpInside)
+
         controller.view.addSubview(button)
+
         NSLayoutConstraint.activate([
-            button.trailingAnchor.constraint(equalTo: controller.view.safeAreaLayoutGuide.trailingAnchor, constant: -12),
-            button.topAnchor.constraint(equalTo: controller.view.safeAreaLayoutGuide.topAnchor, constant: 110),
+            button.trailingAnchor.constraint(
+                equalTo: controller.view.safeAreaLayoutGuide.trailingAnchor,
+                constant: -12
+            ),
+            button.topAnchor.constraint(
+                equalTo: controller.view.safeAreaLayoutGuide.topAnchor,
+                constant: 110
+            ),
             button.widthAnchor.constraint(equalToConstant: 52),
             button.heightAnchor.constraint(equalToConstant: 52)
         ])
+
         settingsButton = button
     }
 
     @objc private func showSettings() {
         guard let controller = activeNavigationController else { return }
-        let sheet = UIAlertController(title: "Navigationseinstellungen", message: "Kartenansicht und Navigation", preferredStyle: .actionSheet)
+
+        let sheet = UIAlertController(
+            title: "Navigationseinstellungen",
+            message: "Kartenansicht und Navigation",
+            preferredStyle: .actionSheet
+        )
+
         sheet.addAction(UIAlertAction(title: "Tagmodus", style: .default) { _ in
             controller.overrideUserInterfaceStyle = .light
             UserDefaults.standard.set("day", forKey: "sb_nav_theme")
         })
+
         sheet.addAction(UIAlertAction(title: "Nachtmodus", style: .default) { _ in
             controller.overrideUserInterfaceStyle = .dark
             UserDefaults.standard.set("night", forKey: "sb_nav_theme")
         })
+
         sheet.addAction(UIAlertAction(title: "Automatisch", style: .default) { _ in
             controller.overrideUserInterfaceStyle = .unspecified
             UserDefaults.standard.set("auto", forKey: "sb_nav_theme")
         })
+
         sheet.addAction(UIAlertAction(title: "Sprache: Deutsch", style: .default) { _ in
-            self.showSettingsInfo("Sprache", "Die Routenberechnung verwendet Deutsch (de-DE). Für die vollständige Übersetzung der Mapbox-Oberfläche muss auch die iOS-App-Lokalisierung Deutsch enthalten.")
+            self.showSettingsInfo(
+                "Sprache",
+                "Die Routenberechnung verwendet Deutsch (de-DE). Für die vollständige Übersetzung der Mapbox-Oberfläche muss auch die iOS-App-Lokalisierung Deutsch enthalten."
+            )
         })
+
         sheet.addAction(UIAlertAction(title: "Sprachausgabe", style: .default) { _ in
-            self.showSettingsInfo("Sprachausgabe", "Die Sprachausgabe lässt sich über das Lautsprechersymbol in der Navigation ein- oder ausschalten.")
+            self.showSettingsInfo(
+                "Sprachausgabe",
+                "Die Sprachausgabe lässt sich über das Lautsprechersymbol in der Navigation ein- oder ausschalten."
+            )
         })
+
         sheet.addAction(UIAlertAction(title: "Kartenansicht", style: .default) { _ in
-            self.showSettingsInfo("Kartenansicht", "Die Kartenkamera lässt sich während der Navigation über die vorhandenen Mapbox-Kartenschaltflächen steuern.")
+            self.showSettingsInfo(
+                "Kartenansicht",
+                "Die Kartenkamera lässt sich während der Navigation über die vorhandenen Mapbox-Kartenschaltflächen steuern."
+            )
         })
+
         sheet.addAction(UIAlertAction(title: "Abbrechen", style: .cancel))
+
         if let popover = sheet.popoverPresentationController {
             popover.sourceView = settingsButton
             popover.sourceRect = settingsButton?.bounds ?? .zero
         }
+
         controller.present(sheet, animated: true)
     }
 
     private func showSettingsInfo(_ title: String, _ message: String) {
         guard let controller = activeNavigationController else { return }
-        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+
+        let alert = UIAlertController(
+            title: title,
+            message: message,
+            preferredStyle: .alert
+        )
+
         alert.addAction(UIAlertAction(title: "OK", style: .default))
         controller.present(alert, animated: true)
     }
-
 }
