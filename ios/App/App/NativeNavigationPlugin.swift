@@ -19,6 +19,9 @@ public class NativeNavigationPlugin: CAPPlugin, CAPBridgedPlugin {
 
     private let locationManager = CLLocationManager()
     private var navigationProvider: MapboxNavigationProvider?
+    private weak var activeNavigationController: NavigationViewController?
+    private var settingsButton: UIButton?
+
 
     @objc func start(_ call: CAPPluginCall) {
         guard let latitude = call.getDouble("latitude"),
@@ -50,6 +53,8 @@ public class NativeNavigationPlugin: CAPPlugin, CAPBridgedPlugin {
                 coordinates: [origin, destination]
             )
 
+            options.locale = Locale(identifier: "de-DE")
+
             let request = mapboxNavigation.routingProvider()
                 .calculateRoutes(options: options)
 
@@ -72,6 +77,13 @@ public class NativeNavigationPlugin: CAPPlugin, CAPBridgedPlugin {
                     )
 
                     controller.modalPresentationStyle = .fullScreen
+                    self.activeNavigationController = controller
+                    switch UserDefaults.standard.string(forKey: "sb_nav_theme") {
+                    case "day": controller.overrideUserInterfaceStyle = .light
+                    case "night": controller.overrideUserInterfaceStyle = .dark
+                    default: controller.overrideUserInterfaceStyle = .unspecified
+                    }
+                    self.addSettingsButton(to: controller)
 
                     guard let viewController = self.bridge?.viewController else {
                         self.navigationProvider = nil
@@ -85,4 +97,47 @@ public class NativeNavigationPlugin: CAPPlugin, CAPBridgedPlugin {
             }
         }
     }
+
+    private func addSettingsButton(to controller: NavigationViewController) {
+        let button = UIButton(type: .system)
+        button.setImage(UIImage(systemName: "gearshape.fill"), for: .normal)
+        button.tintColor = .label
+        button.backgroundColor = .secondarySystemBackground
+        button.layer.cornerRadius = 26
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.accessibilityLabel = "Navigationseinstellungen"
+        button.addTarget(self, action: #selector(showSettings), for: .touchUpInside)
+        controller.view.addSubview(button)
+        NSLayoutConstraint.activate([
+            button.trailingAnchor.constraint(equalTo: controller.view.safeAreaLayoutGuide.trailingAnchor, constant: -12),
+            button.topAnchor.constraint(equalTo: controller.view.safeAreaLayoutGuide.topAnchor, constant: 110),
+            button.widthAnchor.constraint(equalToConstant: 52),
+            button.heightAnchor.constraint(equalToConstant: 52)
+        ])
+        settingsButton = button
+    }
+
+    @objc private func showSettings() {
+        guard let controller = activeNavigationController else { return }
+        let sheet = UIAlertController(title: "Navigationseinstellungen", message: nil, preferredStyle: .actionSheet)
+        sheet.addAction(UIAlertAction(title: "Tagmodus", style: .default) { _ in
+            controller.overrideUserInterfaceStyle = .light
+            UserDefaults.standard.set("day", forKey: "sb_nav_theme")
+        })
+        sheet.addAction(UIAlertAction(title: "Nachtmodus", style: .default) { _ in
+            controller.overrideUserInterfaceStyle = .dark
+            UserDefaults.standard.set("night", forKey: "sb_nav_theme")
+        })
+        sheet.addAction(UIAlertAction(title: "Automatisch", style: .default) { _ in
+            controller.overrideUserInterfaceStyle = .unspecified
+            UserDefaults.standard.set("auto", forKey: "sb_nav_theme")
+        })
+        sheet.addAction(UIAlertAction(title: "Abbrechen", style: .cancel))
+        if let popover = sheet.popoverPresentationController {
+            popover.sourceView = settingsButton
+            popover.sourceRect = settingsButton?.bounds ?? .zero
+        }
+        controller.present(sheet, animated: true)
+    }
+
 }
