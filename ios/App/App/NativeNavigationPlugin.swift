@@ -6,6 +6,7 @@ import Capacitor
 import MapboxDirections
 import MapboxNavigationCore
 import MapboxNavigationUIKit
+import MapboxMaps
 
 @objc(NativeNavigationPlugin)
 public class NativeNavigationPlugin: CAPPlugin, CAPBridgedPlugin, NavigationViewControllerDelegate {
@@ -14,7 +15,8 @@ public class NativeNavigationPlugin: CAPPlugin, CAPBridgedPlugin, NavigationView
     public let jsName = "NativeNavigation"
 
     public let pluginMethods: [CAPPluginMethod] = [
-        CAPPluginMethod(name: "start", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "start", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "updateMarkers", returnType: CAPPluginReturnPromise)
     ]
 
     private let locationManager = CLLocationManager()
@@ -22,6 +24,8 @@ public class NativeNavigationPlugin: CAPPlugin, CAPBridgedPlugin, NavigationView
     private weak var activeNavigationController: NavigationViewController?
     private var settingsButton: UIButton?
     private var loadingOverlay: UIView?
+    private var nativeMarkers: [[String: Any]] = []
+    private var markerManager: PointAnnotationManager?
 
     @objc func start(_ call: CAPPluginCall) {
         guard let latitude = call.getDouble("latitude"),
@@ -114,6 +118,7 @@ public class NativeNavigationPlugin: CAPPlugin, CAPBridgedPlugin, NavigationView
 
                     viewController.present(controller, animated: true) {
                         self.localizeResumeButton(in: controller.view)
+                        self.renderNativeMarkers()
                         self.hideLoading()
                         call.resolve()
                     }
@@ -128,12 +133,123 @@ public class NativeNavigationPlugin: CAPPlugin, CAPBridgedPlugin, NavigationView
     ) {
         Task { @MainActor in
             navigationViewController.dismiss(animated: true) { [weak self] in
+                self?.markerManager = nil
                 self?.hideLoading()
                 self?.settingsButton = nil
                 self?.activeNavigationController = nil
                 self?.navigationProvider = nil
             }
         }
+    }
+
+    @objc func updateMarkers(_ call: CAPPluginCall) {
+        guard let markers = call.getArray("markers") as? [[String: Any]] else {
+            call.reject("Ungültige Markerdaten")
+            return
+        }
+
+        DispatchQueue.main.async {
+            self.nativeMarkers = markers
+            self.renderNativeMarkers()
+            call.resolve()
+        }
+    }
+
+    private func renderNativeMarkers() {
+        guard let controller = activeNavigationController else { return }
+
+        let mapView = controller.navigationMapView.mapView
+
+        if markerManager == nil {
+            markerManager = mapView.annotations.makePointAnnotationManager()
+        }
+
+        var annotations: [PointAnnotation] = []
+
+        for marker in nativeMarkers {
+            guard let id = marker["id"] as? String,
+                let lat = marker["latitude"] as? Double,
+                let lng = marker["longitude"] as? Double,
+                (-90...90).contains(lat),
+                (-180...180).contains(lng) else {
+                continue
+            }
+
+            let type = marker["type"] as? String ?? ""
+            let title = marker["title"] as? String ?? ""
+
+            var annotation = PointAnnotation(
+                id: id,
+                coordinate: CLLocationCoordinate2D(
+                    latitude: lat,
+                    longitude: lng
+                )
+            )
+
+            annotation.image = .init(
+                image: makeMarkerImage(type: type),
+                name: "starburger-\(type)"
+            )
+
+            annotation.textField = title
+            annotation.textSize = 11
+            annotation.textOffset = [0, 1.8]
+            annotation.textColor = StyleColor(.white)
+            annotation.textHaloColor = StyleColor(.black)
+            annotation.textHaloWidth = 1
+
+            annotations.append(annotation)
+        }
+
+        markerManager?.annotations = annotations
+    }
+
+    private func makeMarkerImage(type: String) -> UIImage {
+        let color: UIColor
+        let symbol: String
+
+        switch type {
+        case "poi":
+            color = .systemRed
+            symbol = "camera.fill"
+
+        case "fahrer":
+            color = .systemGreen
+            symbol = "car.fill"
+
+        case "order":
+            color = .systemOrange
+            symbol = "bag.fill"
+
+        case "starburger", "base":
+            color = .systemBlue
+            symbol = "house.fill"
+
+        default:
+            color = .systemGray
+            symbol = "mappin"
+        }
+
+        let size = CGSize(width: 38, height: 38)
+
+        return UIGraphicsImageRenderer(size: size).image { _ in {
+            let rect = CGRect(origin: .zero, size: size)
+
+            color.setFill()
+            UIBezierPath(ovalIn: rect.insetBy(dx: 2, dy: 2)).fill()
+
+            let config = UIImage.SymbolConfiguration(
+                pointSize: 19,
+                weight: .semibold
+            )
+
+            let image = UIImage(
+                systemName: symbol,
+                withConfiguration: config
+            )?.withTintColor(.white, renderingMode: .alwaysOriginal)
+
+            image?.draw(in: CGRect(x: 9, y: 9, width: 20, height: 20))
+        }}
     }
 
     private func showLoading(on parent: UIView?) {
