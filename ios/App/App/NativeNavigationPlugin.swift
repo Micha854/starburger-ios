@@ -155,6 +155,7 @@ public class NativeNavigationPlugin: CAPPlugin, CAPBridgedPlugin, NavigationView
         }
     }
 
+    @MainActor
     private func renderNativeMarkers() {
         guard let controller = activeNavigationController else { return }
 
