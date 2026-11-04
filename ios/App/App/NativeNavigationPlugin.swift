@@ -16,7 +16,10 @@ public class NativeNavigationPlugin: CAPPlugin, CAPBridgedPlugin, NavigationView
 
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "start", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "updateMarkers", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "updateMarkers", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "startGuidance", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "updateGuidance", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "stopGuidance", returnType: CAPPluginReturnPromise)
     ]
 
     private let locationManager = CLLocationManager()
@@ -26,6 +29,9 @@ public class NativeNavigationPlugin: CAPPlugin, CAPBridgedPlugin, NavigationView
     private var loadingOverlay: UIView?
     private var nativeMarkers: [[String: Any]] = []
     private var markerManager: PointAnnotationManager?
+    private var guidanceActive = false
+    private var guidanceGeneration = 0
+    private var guidanceDestination: CLLocationCoordinate2D?
 
     @objc func start(_ call: CAPPluginCall) {
         guard let latitude = call.getDouble("latitude"),
@@ -139,6 +145,67 @@ public class NativeNavigationPlugin: CAPPlugin, CAPBridgedPlugin, NavigationView
                 self?.activeNavigationController = nil
                 self?.navigationProvider = nil
             }
+        }
+    }
+
+    @objc func startGuidance(_ call: CAPPluginCall) {
+        guard let latitude = call.getDouble("latitude"),
+            let longitude = call.getDouble("longitude"),
+            (-90...90).contains(latitude),
+            (-180...180).contains(longitude) else {
+            call.reject("Ungültige Zielkoordinaten")
+            return
+        }
+
+        DispatchQueue.main.async {
+            guard self.activeNavigationController == nil else {
+                call.reject("Native Vollbildnavigation ist bereits aktiv")
+                return
+            }
+
+            self.guidanceGeneration += 1
+            self.guidanceActive = true
+            self.guidanceDestination = CLLocationCoordinate2D(
+                latitude: latitude,
+                longitude: longitude
+            )
+
+            self.notifyListeners("guidanceUpdate", data: [
+                "status": "started",
+                "latitude": latitude,
+                "longitude": longitude
+            ])
+
+            call.resolve()
+        }
+    }
+
+    @objc func updateGuidance(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            guard self.guidanceActive else {
+                call.reject("Keine Hintergrundnavigation aktiv")
+                return
+            }
+
+            self.notifyListeners("guidanceUpdate", data: [
+                "status": "updated"
+            ])
+
+            call.resolve()
+        }
+    }
+
+    @objc func stopGuidance(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            self.guidanceGeneration += 1
+            self.guidanceActive = false
+            self.guidanceDestination = nil
+
+            self.notifyListeners("guidanceUpdate", data: [
+                "status": "stopped"
+            ])
+
+            call.resolve()
         }
     }
 
