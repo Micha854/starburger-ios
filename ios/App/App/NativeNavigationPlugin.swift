@@ -107,10 +107,12 @@ public class NativeNavigationPlugin: CAPPlugin, CAPBridgedPlugin, NavigationView
     }
 
     public func navigationViewControllerDidDismiss(_ navigationViewController: NavigationViewController, byCanceling canceled: Bool) {
-        navigationViewController.dismiss(animated: true) { [weak self] in
-            self?.settingsButton = nil
-            self?.activeNavigationController = nil
-            self?.navigationProvider = nil
+        Task { @MainActor in
+            navigationViewController.dismiss(animated: true) { [weak self] in
+                self?.settingsButton = nil
+                self?.activeNavigationController = nil
+                self?.navigationProvider = nil
+            }
         }
     }
 
