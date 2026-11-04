@@ -19,6 +19,8 @@
 		A10000000000000000000001 /* PoiAlertPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000003 /* PoiAlertPlugin.swift */; };
 		A10000000000000000000002 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000004 /* ViewController.swift */; };
 		A10000000000000000000005 /* poi-warning.wav in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000006 /* poi-warning.wav */; };
+		B20000000000000000000001 /* MapboxNavigationCore in Frameworks */ = {isa = PBXBuildFile; productRef = B20000000000000000000003 /* MapboxNavigationCore */; };
+		B20000000000000000000002 /* MapboxNavigationUIKit in Frameworks */ = {isa = PBXBuildFile; productRef = B20000000000000000000004 /* MapboxNavigationUIKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -44,6 +46,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */,
+				B20000000000000000000001 /* MapboxNavigationCore in Frameworks */,
+				B20000000000000000000002 /* MapboxNavigationUIKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -104,6 +108,8 @@
 			name = App;
 			packageProductDependencies = (
 				4D22ABE82AF431CB00220026 /* CapApp-SPM */,
+				B20000000000000000000003 /* MapboxNavigationCore */,
+				B20000000000000000000004 /* MapboxNavigationUIKit */,
 			);
 			productName = App;
 			productReference = 504EC3041FED79650016851F /* App.app */;
@@ -136,6 +142,7 @@
 			mainGroup = 504EC2FB1FED79650016851F;
 			packageReferences = (
 				D4C12C0A2AAA248700AAC8A2 /* XCLocalSwiftPackageReference "CapApp-SPM" */,
+				B20000000000000000000005 /* XCRemoteSwiftPackageReference "mapbox-navigation-ios" */,
 			);
 			productRefGroup = 504EC3051FED79650016851F /* Products */;
 			projectDirPath = "";
@@ -380,7 +387,28 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		B20000000000000000000005 /* XCRemoteSwiftPackageReference "mapbox-navigation-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/mapbox/mapbox-navigation-ios.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
+		B20000000000000000000003 /* MapboxNavigationCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B20000000000000000000005 /* XCRemoteSwiftPackageReference "mapbox-navigation-ios" */;
+			productName = MapboxNavigationCore;
+		};
+		B20000000000000000000004 /* MapboxNavigationUIKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B20000000000000000000005 /* XCRemoteSwiftPackageReference "mapbox-navigation-ios" */;
+			productName = MapboxNavigationUIKit;
+		};
 		4D22ABE82AF431CB00220026 /* CapApp-SPM */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = D4C12C0A2AAA248700AAC8A2 /* XCLocalSwiftPackageReference "CapApp-SPM" */;
