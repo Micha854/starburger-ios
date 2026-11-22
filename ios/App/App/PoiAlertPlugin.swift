@@ -37,19 +37,26 @@ public class PoiAlertPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     @MainActor
-    private func setSystemVolume(_ volume: Float) {
-        if volumeView == nil {
-            let view = MPVolumeView(frame: CGRect(x: -1000, y: -1000, width: 100, height: 30))
-            self.bridge?.viewController?.view.addSubview(view)
-            volumeView = view
-        }
+    private func prepareVolumeControl() {
+        guard volumeView == nil,
+            let controller = bridge?.viewController else { return }
 
+        let view = MPVolumeView(frame: CGRect(x: 0, y: 0, width: 100, height: 30))
+        view.alpha = 0.01
+        view.isUserInteractionEnabled = false
+
+        controller.view.addSubview(view)
+        volumeView = view
+    }
+
+    @MainActor
+    private func setSystemVolume(_ volume: Float) {
         guard let slider = volumeView?.subviews.compactMap({ $0 as? UISlider }).first else {
-            NSLog("PoiAlert: Lautstärkeregler nicht gefunden")
+            NSLog("PoiAlert: Lautstärkeregler nicht verfügbar")
             return
         }
 
-        slider.value = volume
+        slider.setValue(volume, animated: false)
         slider.sendActions(for: .valueChanged)
     }
 
@@ -113,6 +120,15 @@ public class PoiAlertPlugin: CAPPlugin, CAPBridgedPlugin {
             UIScreen.main.brightness = brightness
             originalBrightness = nil
         }
+
+        do {
+            try AVAudioSession.sharedInstance().setActive(
+                false,
+                options: [.notifyOthersOnDeactivation]
+            )
+        } catch {
+            NSLog("PoiAlert: Audio-Session: \(error)")
+        }
     }
 
     private func setTorch(_ enabled: Bool) {
@@ -166,6 +182,10 @@ public class PoiAlertPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     public override func load() {
+        DispatchQueue.main.async {
+            self.prepareVolumeControl()
+        }
+
         NotificationCenter.default.addObserver(
             forName: UIApplication.willResignActiveNotification,
             object: nil,
