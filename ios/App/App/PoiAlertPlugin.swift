@@ -62,10 +62,18 @@ public class PoiAlertPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     @MainActor
+    private func setWarningVolume() {
+        let session = AVAudioSession.sharedInstance()
+        originalVolume = session.outputVolume
+        setSystemVolume(1.0)
+    }
+
+    @MainActor
     private func startWarning() {
         stopWarning()
 
         originalBrightness = UIScreen.main.brightness
+        setWarningVolume()
         playWarningSound()
         let id = warningID
 
@@ -146,12 +154,6 @@ public class PoiAlertPlugin: CAPPlugin, CAPBridgedPlugin {
             )
 
             try session.setActive(true)
-
-            originalVolume = session.outputVolume
-
-            if session.outputVolume < 1.0 {
-                setSystemVolume(1.0)
-            }
 
             audioPlayer = try AVAudioPlayer(contentsOf: url)
             audioPlayer?.volume = 1.0
