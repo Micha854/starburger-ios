@@ -40,8 +40,7 @@ public class PoiAlertPlugin: CAPPlugin, CAPBridgedPlugin {
     private func setSystemVolume(_ volume: Float) {
         if volumeView == nil {
             let view = MPVolumeView(frame: CGRect(x: -1000, y: -1000, width: 100, height: 30))
-            view.showsRouteButton = false
-            self.viewController?.view.addSubview(view)
+            self.bridge?.viewController?.view.addSubview(view)
             volumeView = view
         }
 
@@ -127,6 +126,7 @@ public class PoiAlertPlugin: CAPPlugin, CAPBridgedPlugin {
         }
     }
 
+    @MainActor
     private func playWarningSound() {
         guard let url = Bundle.main.url(
             forResource: "poi-warning",
