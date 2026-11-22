@@ -43,7 +43,6 @@ public class PoiAlertPlugin: CAPPlugin, CAPBridgedPlugin {
 
         let view = MPVolumeView(frame: CGRect(x: 0, y: 0, width: 100, height: 30))
         view.alpha = 0.01
-        view.isUserInteractionEnabled = false
 
         controller.view.addSubview(view)
         volumeView = view
