@@ -2,6 +2,7 @@ import Foundation
 import AVFoundation
 import UIKit
 import Capacitor
+import MediaPlayer
 
 @objc(PoiAlertPlugin)
 public class PoiAlertPlugin: CAPPlugin, CAPBridgedPlugin {
@@ -18,6 +19,8 @@ public class PoiAlertPlugin: CAPPlugin, CAPBridgedPlugin {
     private var originalBrightness: CGFloat?
     private var audioPlayer: AVAudioPlayer?
     private var warningID = 0
+    private var originalVolume: Float?
+    private var volumeView: MPVolumeView?
 
     @objc func flash(_ call: CAPPluginCall) {
         DispatchQueue.main.async {
@@ -30,6 +33,32 @@ public class PoiAlertPlugin: CAPPlugin, CAPBridgedPlugin {
         DispatchQueue.main.async {
             self.stopWarning()
             call.resolve()
+        }
+    }
+
+    @MainActor
+    private func setSystemVolume(_ volume: Float) {
+        if volumeView == nil {
+            let view = MPVolumeView(frame: CGRect(x: -1000, y: -1000, width: 100, height: 30))
+            view.showsRouteButton = false
+            self.viewController?.view.addSubview(view)
+            volumeView = view
+        }
+
+        guard let slider = volumeView?.subviews.compactMap({ $0 as? UISlider }).first else {
+            NSLog("PoiAlert: Lautstärkeregler nicht gefunden")
+            return
+        }
+
+        slider.value = volume
+        slider.sendActions(for: .valueChanged)
+    }
+
+    @MainActor
+    private func restoreSystemVolume() {
+        if let volume = originalVolume {
+            setSystemVolume(volume)
+            originalVolume = nil
         }
     }
 
@@ -71,6 +100,7 @@ public class PoiAlertPlugin: CAPPlugin, CAPBridgedPlugin {
     @MainActor
     private func finishWarning() {
         setTorch(false)
+        restoreSystemVolume()
 
         if let brightness = originalBrightness {
             UIScreen.main.brightness = brightness
@@ -117,7 +147,14 @@ public class PoiAlertPlugin: CAPPlugin, CAPBridgedPlugin {
 
             try session.setActive(true)
 
+            originalVolume = session.outputVolume
+
+            if session.outputVolume < 1.0 {
+                setSystemVolume(1.0)
+            }
+
             audioPlayer = try AVAudioPlayer(contentsOf: url)
+            audioPlayer?.volume = 1.0
             audioPlayer?.prepareToPlay()
             audioPlayer?.play()
 
